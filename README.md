@@ -81,12 +81,15 @@ OpenChoir Ensemble is the original real-time effect, kept as a separate plugin. 
 
 ## Install on a Mac
 
-1. Build the Mac version on GitHub:
-   - Upload this folder to a new GitHub repository, including the hidden `.github` folder (press **Cmd+Shift+.** in Finder to see it).
-   - The **Actions** tab builds it in about 15 minutes.
-   - Download **OpenChoir-macOS** from the finished run.
-2. Unzip it and open `install.command`. It installs both plugins (VST3 and AU) and the AI engine, then offers to run the one-time AI setup (about 6 GB, 10–30 minutes).
+1. Go to **[Releases](https://github.com/jonathan123jrt/OpenChoir/releases/latest)** and download **OpenChoir-macOS.zip**.
+2. Unzip it, right-click **install.command** and choose **Open**. If macOS blocks it, go to **System Settings → Privacy & Security**, click **Open Anyway**, then open it again. The installer adds both plugins (VST3 and AU) and the AI engine, then offers to run the one-time AI setup (about 6 GB, 10–30 minutes).
 3. In your DAW, put **OpenChoir** on an **instrument track** and open it.
+
+If setup is interrupted, run it again: it picks up where it stopped. To rebuild only the singer voices, run this in Terminal:
+
+```bash
+cd ~/Library/Application\ Support/OpenChoir/ai && .venv/bin/python -u fetch_voices.py --force
+```
 
 To build it yourself instead, you need Xcode and CMake:
 

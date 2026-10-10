@@ -53,3 +53,10 @@ Also verified:
 - Harmony layers land on the correct scale notes in major and minor keys.
 - Key detection matches the test melodies.
 - Reopening a project at a different sample rate restores the vocal, the layers, the settings and the mutes.
+
+## 0.3.1 – first real-Mac setup
+
+| # | Finding | Fix |
+|---|---|---|
+| M1 | No voices were built: every VocalSet clip failed with "Truncated file header". VocalSet's 6 GB zip was written without proper ZIP64 records, so file positions past 4 GB wrap around, and the voice files sit past that point | `fetch_voices.py` now checks each file's stored position and, when it's wrong, finds the true one (stored position + n × 4 GB, confirmed by the file's own header). Tested on a simulated wrapped archive: all 271 files recovered byte for byte |
+| M2 | A failed voice build still saved an empty voice bank, so the plugin said "ready" and then failed at render time | No voice bank is saved unless at least one voice was built |
