@@ -1,0 +1,101 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (universal binary for Apple Silicon and Intel)
+        run: >
+          cmake -B build -G Xcode
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          -DOPENCHOIR_BUILD_TESTS=ON
+
+      - name: Build
+        run: >
+          cmake --build build --config Release
+          --target OpenChoir_VST3 OpenChoir_AU OpenChoir_Standalone
+          OpenChoirEnsemble_VST3 OpenChoirEnsemble_AU OpenChoirEnsemble_Standalone
+          openchoir_tests openchoir_ai_tests -- -quiet
+
+      - name: Self-tests - OpenChoir Ensemble (state, presets, layouts, clicks)
+        run: build/openchoir_tests_artefacts/Release/openchoir_tests ensemble.png
+
+      - name: Self-tests - OpenChoir (vocal -> render -> mix -> export -> reopen)
+        run: |
+          python3 -m pip install --quiet --break-system-packages numpy scipy || python3 -m pip install --quiet numpy scipy
+          python3 Tools/make_test_bank.py ai/voices/vocalset
+          python3 Tools/make_test_vocal.py test_vocal.wav
+          mkdir -p screens renders
+          OPENCHOIR_AI_DIR="$PWD/ai" OPENCHOIR_PYTHON="$(which python3)" OPENCHOIR_ENGINE=test \
+          OPENCHOIR_RENDERS_DIR="$PWD/renders" \
+            build/openchoir_ai_tests_artefacts/Release/openchoir_ai_tests test_vocal.wav screens
+          rm -rf ai/voices
+
+      - name: Validate with pluginval (VST3 + AU) and auval
+        continue-on-error: true   # report problems without blocking the download
+        run: |
+          set -o pipefail
+          curl -L -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          unzip -q pluginval.zip
+          ART=build/OpenChoir_artefacts/Release
+          ENS=build/OpenChoirEnsemble_artefacts/Release
+          mkdir -p ~/Library/Audio/Plug-Ins/Components ~/Library/Audio/Plug-Ins/VST3
+          cp -R "$ART/AU/OpenChoir.component" "$ENS/AU/OpenChoir Ensemble.component" ~/Library/Audio/Plug-Ins/Components/
+          cp -R "$ART/VST3/OpenChoir.vst3" "$ENS/VST3/OpenChoir Ensemble.vst3" ~/Library/Audio/Plug-Ins/VST3/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          PV=pluginval.app/Contents/MacOS/pluginval
+          for p in "VST3/OpenChoir.vst3" "VST3/OpenChoir Ensemble.vst3" "Components/OpenChoir.component" "Components/OpenChoir Ensemble.component"; do
+            echo "=== $p"; $PV --strictness-level 5 --validate-in-process --skip-gui-tests "$HOME/Library/Audio/Plug-Ins/$p"
+          done 2>&1 | tee pluginval.txt
+          (auval -v aumu Ocai Opch; auval -v aufx Ochr Opch) 2>&1 | tee auval.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-reports
+          path: |
+            pluginval.txt
+            auval.txt
+            ensemble.png
+            screens/*.png
+          if-no-files-found: ignore
+
+      - name: Ad-hoc sign and package
+        run: |
+          ART=build/OpenChoir_artefacts/Release
+          ENS=build/OpenChoirEnsemble_artefacts/Release
+          D=dist/OpenChoir-macOS
+          mkdir -p "$D"
+          cp -R "$ART/VST3/OpenChoir.vst3" "$ART/AU/OpenChoir.component" "$ART/Standalone/OpenChoir.app" "$D/"
+          cp -R "$ENS/VST3/OpenChoir Ensemble.vst3" "$ENS/AU/OpenChoir Ensemble.component" "$ENS/Standalone/OpenChoir Ensemble.app" "$D/"
+          for b in "$D"/*.vst3 "$D"/*.component "$D"/*.app; do codesign --force --deep --sign - "$b"; done
+          cp packaging/INSTALL-macOS.txt packaging/install.command "$D/"
+          chmod +x "$D/install.command"
+          mkdir -p "$D/OpenChoir AI"
+          cp ai/*.py ai/requirements.txt ai/README.md ai/*.command "$D/OpenChoir AI/"
+          chmod +x "$D/OpenChoir AI/"*.command
+          cd dist && ditto -c -k --keepParent OpenChoir-macOS OpenChoir-macOS.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenChoir-macOS
+          path: dist/OpenChoir-macOS.zip
+
+      - name: Attach to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/OpenChoir-macOS.zip
