@@ -1,0 +1,19 @@
+OpenChoir
+Copyright (C) 2026 OpenChoir contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+The full licence text is at <https://www.gnu.org/licenses/agpl-3.0.txt>.
+(On GitHub: Add file > Create new file > name it LICENSE > "Choose a license
+template" > GNU AGPLv3, to replace this file with the full text.)
+
+OpenChoir is built with the JUCE framework, which is used here under its
+AGPLv3 option, and the Steinberg VST3 SDK (MIT licence). VST is a registered
+trademark of Steinberg Media Technologies GmbH.

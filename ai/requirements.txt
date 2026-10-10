@@ -1,0 +1,21 @@
+# OpenChoir AI - Python 3.10
+# PyTorch: Apple Silicon / Windows / Linux use 2.5.1; Intel Macs top out at 2.2.2
+torch==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torchaudio==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torchaudio==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+
+# Seed-VC runtime (trimmed from its requirements-mac.txt to what singing inference needs;
+# descript-audio-codec is replaced by a stub - see oc_engine.install_dac_stub)
+numpy==1.26.4
+scipy==1.13.1
+librosa==0.10.2
+soundfile==0.12.1
+transformers==4.46.3
+huggingface-hub>=0.28.1,<1.0
+munch==4.0.0
+einops==0.8.0
+pydub==0.25.1
+pyyaml
+tqdm
+matplotlib
